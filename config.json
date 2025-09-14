@@ -1,0 +1,12 @@
+{
+  "recent": true,
+  "jumplist": true,
+  "temp": true,
+  "clipboard": true,
+  "browser_cache": {
+    "chrome": true,
+    "edge": true,
+    "firefox": false
+  },
+  "preserve_passwords": true
+}
