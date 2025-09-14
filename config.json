@@ -8,5 +8,10 @@
     "edge": true,
     "firefox": false
   },
-  "preserve_passwords": true
+  "preserve_passwords": true,
+  "search_history": true,
+  "run_history": true,
+  "event_logs": true,
+  "flush_dns": true,
+  "wer": true
 }

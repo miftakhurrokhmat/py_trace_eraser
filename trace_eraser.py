@@ -1,15 +1,19 @@
 import os
+import shutil
 import json
 import subprocess
+import winreg
 
 CONFIG_FILE = "config.json"
 
+# --- Config Loader ---
 def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
+# --- Utility Functions ---
 def get_size(path):
     total = 0
     for root, _, files in os.walk(path):
@@ -37,6 +41,7 @@ def clean_folder(path, whitelist=None):
                 pass
     return deleted_files, deleted_size
 
+# --- Clean Recent / Jumplist / Temp / Clipboard ---
 def clean_recent():
     targets = [os.path.join(os.getenv("APPDATA"), r"Microsoft\Windows\Recent Items")]
     total_files, total_size = 0, 0
@@ -45,6 +50,7 @@ def clean_recent():
         total_files += f
         total_size += s
     return total_files, total_size
+
 
 def clean_jumplist():
     targets = [
@@ -58,9 +64,11 @@ def clean_jumplist():
         total_size += s
     return total_files, total_size
 
+
 def clean_temp():
     temp = os.getenv("TEMP")
     return clean_folder(temp)
+
 
 def clean_clipboard():
     try:
@@ -69,25 +77,23 @@ def clean_clipboard():
     except:
         return 0, 0
 
+# --- Browser Cache ---
 def clean_browser_cache(config):
     total_files, total_size = 0, 0
     localapp = os.getenv("LOCALAPPDATA")
 
-    # Chrome
     if config.get("chrome", False):
         chrome_cache = os.path.join(localapp, r"Google\Chrome\User Data\Default\Cache")
         f, s = clean_folder(chrome_cache, whitelist=["Login Data", "Cookies"])
         total_files += f
         total_size += s
 
-    # Edge
     if config.get("edge", False):
         edge_cache = os.path.join(localapp, r"Microsoft\Edge\User Data\Default\Cache")
         f, s = clean_folder(edge_cache, whitelist=["Login Data", "Cookies"])
         total_files += f
         total_size += s
 
-    # Firefox (opsional)
     if config.get("firefox", False):
         firefox = os.path.join(os.getenv("APPDATA"), r"Mozilla\Firefox\Profiles")
         for root, dirs, _ in os.walk(firefox):
@@ -98,6 +104,44 @@ def clean_browser_cache(config):
                 total_size += s
     return total_files, total_size
 
+# --- Registry Cleanup ---
+def clean_registry_keys(path):
+    deleted = 0
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, path, 0, winreg.KEY_ALL_ACCESS)
+        i = 0
+        while True:
+            try:
+                subkey = winreg.EnumValue(key, 0)
+                winreg.DeleteValue(key, subkey[0])
+                deleted += 1
+            except OSError:
+                break
+    except Exception as e:
+        pass
+    return deleted
+
+# --- Event Logs ---
+def clear_event_logs():
+    logs = ["Application", "System", "Security"]
+    cleared = 0
+    for log in logs:
+        try:
+            subprocess.run(f"wevtutil cl {log}", shell=True, check=True)
+            cleared += 1
+        except:
+            pass
+    return cleared
+
+# --- DNS Flush ---
+def flush_dns():
+    try:
+        subprocess.run("ipconfig /flushdns", shell=True)
+        return True
+    except:
+        return False
+
+# --- Main Execution ---
 if __name__ == "__main__":
     config = load_config()
     total_files, total_size = 0, 0
@@ -131,5 +175,36 @@ if __name__ == "__main__":
         total_size += s
         print(f"🌐 Browser Cache: {f} files, {s//1024//1024} MB")
 
-    print("\n✅ Selesai!")
-    print(f"Total dibersihkan: {total_files} files, {total_size//1024//1024} MB")
+    # Registry cleanup
+    reg_deleted = 0
+    if config.get("search_history", False):
+        reg_deleted += clean_registry_keys(r"Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery")
+        print(f"🔍 Search History cleared: {reg_deleted} keys")
+
+    if config.get("run_history", False):
+        reg_deleted += clean_registry_keys(r"Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU")
+        print(f"⚡ Run Dialog History cleared: {reg_deleted} keys")
+
+    # Event logs
+    if config.get("event_logs", False):
+        cleared_logs = clear_event_logs()
+        print(f"📄 Event Logs cleared: {cleared_logs} logs")
+
+    # Flush DNS
+    if config.get("flush_dns", False):
+        if flush_dns():
+            print("🌐 DNS cache flushed")
+
+    # WER & Minidump
+    if config.get("wer", False):
+        wer_paths = [r"C:\ProgramData\Microsoft\Windows\WER", r"C:\Windows\Minidump"]
+        wer_files, wer_size = 0, 0
+        for path in wer_paths:
+            f, s = clean_folder(path)
+            wer_files += f
+            wer_size += s
+        total_files += wer_files
+        total_size += wer_size
+        print(f"💥 WER & Minidump cleared: {wer_files} files, {wer_size//1024//1024} MB")
+
+    print(f"\n✅ Total dibersihkan: {total_files} files, {total_size//1024//1024} MB")
