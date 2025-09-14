@@ -1,5 +1,4 @@
 import os
-import shutil
 import json
 import subprocess
 import winreg
@@ -132,14 +131,6 @@ def clear_event_logs():
         except:
             pass
     return cleared
-
-# --- DNS Flush ---
-def flush_dns():
-    try:
-        subprocess.run("ipconfig /flushdns", shell=True)
-        return True
-    except:
-        return False
 
 # --- Main Execution ---
 if __name__ == "__main__":
