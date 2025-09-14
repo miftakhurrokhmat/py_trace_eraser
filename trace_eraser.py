@@ -189,22 +189,3 @@ if __name__ == "__main__":
     if config.get("event_logs", False):
         cleared_logs = clear_event_logs()
         print(f"📄 Event Logs cleared: {cleared_logs} logs")
-
-    # Flush DNS
-    if config.get("flush_dns", False):
-        if flush_dns():
-            print("🌐 DNS cache flushed")
-
-    # WER & Minidump
-    if config.get("wer", False):
-        wer_paths = [r"C:\ProgramData\Microsoft\Windows\WER", r"C:\Windows\Minidump"]
-        wer_files, wer_size = 0, 0
-        for path in wer_paths:
-            f, s = clean_folder(path)
-            wer_files += f
-            wer_size += s
-        total_files += wer_files
-        total_size += wer_size
-        print(f"💥 WER & Minidump cleared: {wer_files} files, {wer_size//1024//1024} MB")
-
-    print(f"\n✅ Total dibersihkan: {total_files} files, {total_size//1024//1024} MB")

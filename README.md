@@ -12,8 +12,6 @@ Cleans Recent Items, Jump Lists, Temp files, Clipboard, Browser cache, Registry 
 - 🔍 Clear File Explorer Search History
 - ⚡ Clear Run Dialog History (Win + R)
 - 📄 Clear Windows Event Logs (System, Application, Security)
-- 💥 Clear WER & Minidump files
-- 🌐 Flush DNS Cache
 - 📊 Summary of deleted files and size
 
 ## Usage
@@ -43,9 +41,7 @@ Example:
   "preserve_passwords": true,
   "search_history": true,
   "run_history": true,
-  "event_logs": true,
-  "flush_dns": true,
-  "wer": true
+  "event_logs": true
 }
 ```
 
