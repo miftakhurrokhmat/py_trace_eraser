@@ -1,7 +1,7 @@
 # py_trace_eraser
 
 Python-based tool to erase activity traces on Windows.
-Cleans Recent Items, Jump Lists, Temp files, Clipboard, Browser cache, Registry entries, Event Logs, WER/Minidump, and DNS cache (without touching saved passwords or cookies).
+Cleans Recent Items, Jump Lists, Temp files, Clipboard, Browser cache, Registry entries, Event Logs.
 
 ## Features
 - 🗑️ Clean Recent Items
