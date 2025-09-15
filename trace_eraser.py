@@ -5,6 +5,7 @@ import winreg
 
 CONFIG_FILE = "config.json"
 
+
 # --- Config Loader ---
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -12,17 +13,8 @@ def load_config():
             return json.load(f)
     return {}
 
-# --- Utility Functions ---
-def get_size(path):
-    total = 0
-    for root, _, files in os.walk(path):
-        for f in files:
-            try:
-                total += os.path.getsize(os.path.join(root, f))
-            except:
-                pass
-    return total
 
+# --- Utility Functions ---
 def clean_folder(path, whitelist=None):
     deleted_files, deleted_size = 0, 0
     if not os.path.exists(path):
@@ -40,15 +32,33 @@ def clean_folder(path, whitelist=None):
                 pass
     return deleted_files, deleted_size
 
+
 # --- Clean Recent / Jumplist / Temp / Clipboard ---
 def clean_recent():
-    targets = [os.path.join(os.getenv("APPDATA"), r"Microsoft\Windows\Recent Items")]
-    total_files, total_size = 0, 0
-    for t in targets:
-        f, s = clean_folder(t)
-        total_files += f
-        total_size += s
-    return total_files, total_size
+    target = os.path.join(os.getenv("APPDATA"), r"Microsoft\Windows\Recent Items")
+    return clean_folder(target)
+
+
+def force_clean_recent():
+    cmds = [
+        r'del /f /s /q /a "%APPDATA%\Microsoft\Windows\Recent Items\*"',
+        r'del /f /s /q /a "%APPDATA%\Microsoft\Windows\Recent\AutomaticDestinations\*"',
+        r'del /f /s /q /a "%APPDATA%\Microsoft\Windows\Recent\CustomDestinations\*"'
+    ]
+    deleted_files = 0
+    for cmd in cmds:
+        try:
+            result = subprocess.run(
+                cmd + " >nul 2>&1",
+                shell=True,
+                capture_output=True,
+                text=True
+            )
+            if result.stdout:
+                deleted_files += result.stdout.count("Deleted file")
+        except:
+            pass
+    return deleted_files, 0
 
 
 def clean_jumplist():
@@ -65,8 +75,7 @@ def clean_jumplist():
 
 
 def clean_temp():
-    temp = os.getenv("TEMP")
-    return clean_folder(temp)
+    return clean_folder(os.getenv("TEMP"))
 
 
 def clean_clipboard():
@@ -75,6 +84,7 @@ def clean_clipboard():
         return 1, 0
     except:
         return 0, 0
+
 
 # --- Browser Cache ---
 def clean_browser_cache(config):
@@ -103,12 +113,12 @@ def clean_browser_cache(config):
                 total_size += s
     return total_files, total_size
 
+
 # --- Registry Cleanup ---
 def clean_registry_keys(path):
     deleted = 0
     try:
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, path, 0, winreg.KEY_ALL_ACCESS)
-        i = 0
         while True:
             try:
                 subkey = winreg.EnumValue(key, 0)
@@ -116,9 +126,25 @@ def clean_registry_keys(path):
                 deleted += 1
             except OSError:
                 break
-    except Exception as e:
+    except:
         pass
     return deleted
+
+
+# --- Thumbnails ---
+def clean_thumbnails():
+    explorer = os.path.join(os.getenv("LOCALAPPDATA"), r"Microsoft\Windows\Explorer")
+    deleted = 0
+    if os.path.exists(explorer):
+        for file in os.listdir(explorer):
+            if file.startswith("thumbcache") and file.endswith(".db"):
+                try:
+                    os.remove(os.path.join(explorer, file))
+                    deleted += 1
+                except:
+                    pass
+    return deleted
+
 
 # --- Event Logs ---
 def clear_event_logs():
@@ -132,6 +158,17 @@ def clear_event_logs():
             pass
     return cleared
 
+
+# --- Restart Explorer ---
+def restart_explorer():
+    try:
+        subprocess.run("taskkill /f /im explorer.exe >nul 2>&1", shell=True)
+        subprocess.run("start explorer.exe", shell=True)
+        return True
+    except:
+        return False
+
+
 # --- Main Execution ---
 if __name__ == "__main__":
     config = load_config()
@@ -142,6 +179,12 @@ if __name__ == "__main__":
         total_files += f
         total_size += s
         print(f"🗑️ Recent: {f} files, {s//1024//1024} MB")
+
+    if config.get("force_recent", False):
+        f, s = force_clean_recent()
+        total_files += f
+        total_size += s
+        print(f"🧹 Forced deletion: {f} files")
 
     if config.get("jumplist", False):
         f, s = clean_jumplist()
@@ -166,17 +209,25 @@ if __name__ == "__main__":
         total_size += s
         print(f"🌐 Browser Cache: {f} files, {s//1024//1024} MB")
 
-    # Registry cleanup
-    reg_deleted = 0
     if config.get("search_history", False):
-        reg_deleted += clean_registry_keys(r"Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery")
+        reg_deleted = clean_registry_keys(r"Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery")
         print(f"🔍 Search History cleared: {reg_deleted} keys")
 
     if config.get("run_history", False):
-        reg_deleted += clean_registry_keys(r"Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU")
+        reg_deleted = clean_registry_keys(r"Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU")
         print(f"⚡ Run Dialog History cleared: {reg_deleted} keys")
 
-    # Event logs
+    if config.get("thumbnails", False):
+        thumbs = clean_thumbnails()
+        total_files += thumbs
+        print(f"🖼️ Thumbnails cleared: {thumbs} files")
+
     if config.get("event_logs", False):
         cleared_logs = clear_event_logs()
         print(f"📄 Event Logs cleared: {cleared_logs} logs")
+
+    if config.get("restart_explorer", False):
+        if restart_explorer():
+            print("🔄 Explorer restarted")
+
+    print(f"\n✅ Total cleaned: {total_files} files, {total_size//1024//1024} MB")

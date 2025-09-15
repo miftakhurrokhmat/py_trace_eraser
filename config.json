@@ -1,5 +1,6 @@
 {
   "recent": true,
+  "force_recent": true,
   "jumplist": true,
   "temp": true,
   "clipboard": true,
@@ -8,8 +9,9 @@
     "edge": true,
     "firefox": false
   },
-  "preserve_passwords": true,
   "search_history": true,
   "run_history": true,
-  "event_logs": true
+  "thumbnails": true,
+  "event_logs": true,
+  "restart_explorer": true
 }
