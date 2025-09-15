@@ -13,5 +13,7 @@
   "run_history": true,
   "thumbnails": true,
   "event_logs": true,
+  "startmenu_recent": true,
+  "disable_recommended": true,
   "restart_explorer": true
 }
